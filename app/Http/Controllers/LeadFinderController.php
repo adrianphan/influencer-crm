@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 class LeadFinderController extends Controller
 {
-    public function index(Request $request, GooglePlacesService $googlePlacesService)
+    public function index(Request $request, GooglePlacesService $googlePlacesService, LeadScoringService $leadScoringService)
     {
         $filters = [
             'search_query' => $request->input('search_query'),
@@ -23,7 +23,19 @@ class LeadFinderController extends Controller
 
         if ($hasSearch) {
             $results = collect($googlePlacesService->search($filters))
-                ->map(function ($result) {
+                ->map(function ($result) use ($leadScoringService) {
+                    $previewBusiness = new Business([
+                        'name' => $result['name'] ?? null,
+                        'lead_type' => $result['lead_type'] ?? 'business',
+                        'category' => $result['category'] ?? null,
+                        'website' => $result['website'] ?? null,
+                        'instagram' => $result['instagram'] ?? null,
+                        'email' => $result['email'] ?? null,
+                        'notes' => $result['notes'] ?? null,
+                    ]);
+
+                    $scoring = $leadScoringService->score($previewBusiness);
+                    $result['fit_score'] = $scoring['fit_score'];
                     $result['already_in_crm'] = $this->findDuplicate($result) ? true : false;
                     return $result;
                 })

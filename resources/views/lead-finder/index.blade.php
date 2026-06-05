@@ -37,9 +37,6 @@
             Las Vegas PR agencies, Las Vegas hospitality PR firms, Las Vegas influencer marketing agencies.
         </p>
 
-        <p class="muted">
-            Connect Google Places by setting <strong>GOOGLE_PLACES_API_KEY</strong> in your environment.
-        </p>
     </div>
 
     @if($hasSearch)
