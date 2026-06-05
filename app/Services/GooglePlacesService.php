@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Http;
 
 class GooglePlacesService
 {
+    private const SEARCH_ENDPOINT = 'https://places.googleapis.com/v1/places:searchText';
+    private const DETAILS_ENDPOINT = 'https://places.googleapis.com/v1/places';
+
     public function search(array $filters): array
     {
         $apiKey = config('services.google_places.api_key');
@@ -17,21 +20,23 @@ class GooglePlacesService
         $query = $this->buildSearchQuery($filters);
 
         try {
-            $response = Http::get('https://maps.googleapis.com/maps/api/place/textsearch/json', [
-                'query' => $query,
-                'key' => $apiKey,
+            $response = Http::withHeaders([
+                'X-Goog-Api-Key' => $apiKey,
+                'X-Goog-FieldMask' => 'places.id,places.displayName,places.formattedAddress,places.rating,places.types',
+            ])->post(self::SEARCH_ENDPOINT, [
+                'textQuery' => $query,
+                'maxResultCount' => 12,
             ]);
 
             if (!$response->successful()) {
                 return [];
             }
 
-            $results = data_get($response->json(), 'results', []);
+            $results = data_get($response->json(), 'places', []);
 
             return collect($results)
-                ->take(12)
                 ->map(function ($item) use ($apiKey, $filters) {
-                    $placeId = (string) ($item['place_id'] ?? '');
+                    $placeId = (string) ($item['id'] ?? '');
                     $details = $this->fetchPlaceDetails($placeId, $apiKey);
 
                     $leadType = $this->resolveLeadType($item, $filters['lead_type'] ?? null);
@@ -39,14 +44,14 @@ class GooglePlacesService
                     $rating = isset($item['rating']) ? (float) $item['rating'] : null;
 
                     return [
-                        'name' => (string) ($item['name'] ?? ''),
+                        'name' => (string) data_get($item, 'displayName.text', ''),
                         'lead_type' => $leadType,
                         'category' => $category,
                         'website' => $details['website'] ?? null,
                         'instagram' => null,
                         'email' => null,
                         'phone' => $details['phone'] ?? null,
-                        'address' => (string) ($item['formatted_address'] ?? ''),
+                        'address' => (string) ($item['formattedAddress'] ?? ''),
                         'rating' => $rating,
                         'place_id' => $placeId,
                         'city' => $filters['city'] ?: 'Las Vegas',
@@ -93,21 +98,20 @@ class GooglePlacesService
         }
 
         try {
-            $response = Http::get('https://maps.googleapis.com/maps/api/place/details/json', [
-                'place_id' => $placeId,
-                'fields' => 'formatted_phone_number,website',
-                'key' => $apiKey,
-            ]);
+            $response = Http::withHeaders([
+                'X-Goog-Api-Key' => $apiKey,
+                'X-Goog-FieldMask' => 'nationalPhoneNumber,websiteUri',
+            ])->get(self::DETAILS_ENDPOINT . '/' . rawurlencode($placeId));
 
             if (!$response->successful()) {
                 return [];
             }
 
-            $result = data_get($response->json(), 'result', []);
+            $result = $response->json();
 
             return [
-                'phone' => $result['formatted_phone_number'] ?? null,
-                'website' => $result['website'] ?? null,
+                'phone' => $result['nationalPhoneNumber'] ?? null,
+                'website' => $result['websiteUri'] ?? null,
             ];
         } catch (\Throwable $e) {
             return [];
