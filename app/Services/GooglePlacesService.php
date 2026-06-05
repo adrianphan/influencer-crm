@@ -50,6 +50,7 @@ class GooglePlacesService
                         'website' => $details['website'] ?? null,
                         'instagram' => null,
                         'email' => null,
+                        'fit_score' => null,
                         'phone' => $details['phone'] ?? null,
                         'address' => (string) ($item['formattedAddress'] ?? ''),
                         'rating' => $rating,
