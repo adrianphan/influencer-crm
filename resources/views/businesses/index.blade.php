@@ -63,6 +63,16 @@
             opacity: 0.95;
         }
 
+        .platform-link {
+            color: #ffffff;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .platform-link:hover {
+            filter: brightness(0.95);
+        }
+
         .platform-instagram {
             background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 55%, #fcb045 100%);
         }
@@ -139,20 +149,69 @@
         </div>
     </div>
 
+    @php
+        $instagramHandle = trim((string) ($creatorProfile->instagram_handle ?? ''));
+        $tiktokHandle = trim((string) ($creatorProfile->tiktok_handle ?? ''));
+        $youtubeHandle = trim((string) ($creatorProfile->youtube_handle ?? ''));
+
+        $instagramUrl = '';
+        if ($instagramHandle !== '') {
+            $instagramUrl = \Illuminate\Support\Str::startsWith($instagramHandle, ['http://', 'https://'])
+                ? $instagramHandle
+                : 'https://www.instagram.com/' . ltrim($instagramHandle, '@/');
+        }
+
+        $tiktokUrl = '';
+        if ($tiktokHandle !== '') {
+            $tiktokUrl = \Illuminate\Support\Str::startsWith($tiktokHandle, ['http://', 'https://'])
+                ? $tiktokHandle
+                : 'https://www.tiktok.com/@' . ltrim($tiktokHandle, '@/');
+        }
+
+        $youtubeUrl = '';
+        if ($youtubeHandle !== '') {
+            if (\Illuminate\Support\Str::startsWith($youtubeHandle, ['http://', 'https://'])) {
+                $youtubeUrl = $youtubeHandle;
+            } elseif (\Illuminate\Support\Str::startsWith($youtubeHandle, 'UC')) {
+                $youtubeUrl = 'https://www.youtube.com/channel/' . $youtubeHandle;
+            } else {
+                $youtubeUrl = 'https://www.youtube.com/@' . ltrim($youtubeHandle, '@/');
+            }
+        }
+    @endphp
+
     <div class="platform-grid">
         <div class="platform-card platform-instagram">
             <h3>Instagram</h3>
-            <p>{{ $creatorProfile->instagram_handle ?? '@yourhandle' }}</p>
+            <p>
+                @if($instagramUrl)
+                    <a class="platform-link" href="{{ $instagramUrl }}" target="_blank" rel="noopener noreferrer">{{ $creatorProfile->instagram_handle }}</a>
+                @else
+                    @yourhandle
+                @endif
+            </p>
             <p><strong>{{ number_format($instagramFollowers) }}</strong> followers</p>
         </div>
         <div class="platform-card platform-tiktok">
             <h3>TikTok</h3>
-            <p>{{ $creatorProfile->tiktok_handle ?? '@yourhandle' }}</p>
+            <p>
+                @if($tiktokUrl)
+                    <a class="platform-link" href="{{ $tiktokUrl }}" target="_blank" rel="noopener noreferrer">{{ $creatorProfile->tiktok_handle }}</a>
+                @else
+                    @yourhandle
+                @endif
+            </p>
             <p><strong>{{ number_format($tiktokFollowers) }}</strong> followers</p>
         </div>
         <div class="platform-card platform-youtube">
             <h3>YouTube</h3>
-            <p>{{ $creatorProfile->youtube_handle ?? '@yourchannel' }}</p>
+            <p>
+                @if($youtubeUrl)
+                    <a class="platform-link" href="{{ $youtubeUrl }}" target="_blank" rel="noopener noreferrer">{{ $creatorProfile->youtube_handle }}</a>
+                @else
+                    @yourchannel
+                @endif
+            </p>
             <p><strong>{{ number_format($youtubeSubscribers) }}</strong> subscribers</p>
         </div>
     </div>
